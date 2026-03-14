@@ -837,7 +837,13 @@ class AudioReader:
                 self.analysis_stats.inc('rtcp_packets_total')
                 self.analysis_stats.inc(f'rtcp_type_{packet.type}')
 
-                if not isinstance(packet, rtp.ReceiverReportPacket):
+                # RFC 3550 defines RTCP PT=200 as Sender Report (SR) and
+                # PT=201 as Receiver Report (RR) (see RFC 3550 section 6.4).
+                # Compound RTCP traffic is expected to begin with SR or RR
+                # (section 6.1), so both are treated as normal baseline
+                # control-plane packets here.
+                # Only non-SR/RR RTCP classes are logged as unexpected/noisy.
+                if not isinstance(packet, (rtp.ReceiverReportPacket, rtp.SenderReportPacket)):
                     self._log_unexpected_rtcp_packet(packet, packet_data)
         except CryptoError as e:
             log.error("CryptoError decoding packet data")
